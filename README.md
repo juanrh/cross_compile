@@ -13,7 +13,6 @@ The cross compilation toolchain and docker have to be installed. The following i
 sudo apt-get update
 sudo apt-get install -y build-essential cmake git wget curl lsb-core bash-completion qemu-user-static g++-aarch64-linux-gnu g++-arm-linux-gnueabihf python3-pip htop
 sudo python3 -m pip install -U  colcon-common-extensions rosdep vcstool
-pip3 install awscli --upgrade --user
 
 # Also install docker and make it available to the current user: https://docs.docker.com/install/linux/docker-ce/ubuntu/
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
@@ -30,12 +29,6 @@ docker run hello-world
 ### Building a workspace
 
 ```bash
-# assuming AWS credentials are setup.
-#   in case of error "Unknown options: --no-include-email", then upgrade
-#   AWS CLI with `pip3 install awscli --upgrade --user`
-ecr_login=$(aws --region us-west-2 ecr get-login --no-include-email)
-${ecr_login}
-
 # Install plugin
 pip3 install --editable src/Colcon-cc-build/colcon_cc_build --user
 
