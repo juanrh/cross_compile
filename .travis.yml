@@ -1,0 +1,16 @@
+dist: xenial
+language: generic
+sudo: required
+env:
+  global:
+    - SH=bash
+  matrix:
+    - ARCH=generic_arm64 OS=ubuntu_bionic ROS_DISTRO=crystal RMW_IMPLEMENTATION=fastrtps PACKAGES='ros_core'
+install:
+  - sudo apt-get update
+  - sudo apt-get install -y python3-setuptools build-essential cmake git wget curl lsb-core bash-completion qemu-user-static g++-aarch64-linux-gnu g++-arm-linux-gnueabihf python3-pip htop
+  - pip3 install --upgrade pip 
+  - sudo python3 -m pip install -U  colcon-common-extensions rosdep vcstool
+script:
+  # TODO switch, if PACKAGES is ros-core build all ROS 
+  - echo "hello!"
