@@ -39,6 +39,20 @@ function setup_source_code {
     popd
 }
 
+function setup_additional_build_args {
+    case ${PACKAGE_REPOS} in
+        "crystal_core")
+            # approximation to avoid timeout in Travis
+            CC_BUILD_SUFFIX="--packages-up-to rcl"
+            ;;
+
+        *)  
+            CC_BUILD_SUFFIX=""
+            ;;
+    esac
+}
+
+CC_ROOT="${ARCH}-${OS}-${RMW}-${ROS_DISTRO}"
 mkdir -p workspace
 pushd workspace
 
@@ -48,11 +62,11 @@ setup_source_code
 colcon cc-setup-sysroot --arch ${ARCH} --os ${OS} \
     --distro ${ROS_DISTRO} --rmw ${RMW} \
     --sysroot-base-image ${SYSROOT_IMAGE}
-CC_ROOT="${ARCH}-${OS}-${RMW}-${ROS_DISTRO}"
 bash ${CC_ROOT}/cc_system_setup.bash
 
+setup_additional_build_args
 source ${CC_ROOT}/cc_build_setup.bash
 colcon cc-build --arch ${ARCH} --os ${OS} \
-    --distro ${ROS_DISTRO} --rmw ${RMW}
+    --distro ${ROS_DISTRO} --rmw ${RMW} ${CC_BUILD_SUFFIX}
 
 popd
