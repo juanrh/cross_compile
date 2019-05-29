@@ -2,6 +2,7 @@ import argparse
 import os, sys, shutil, tempfile, tarfile, re
 from collections import namedtuple
 from pathlib import Path
+from yaspin import yaspin
 
 import docker
 
@@ -167,6 +168,7 @@ class CCSetupSysrootVerb(VerbExtensionPoint):
             for line in stream_obj.get('stream', '').split('\n'):
                  print('{}'.format(line))
         
+    @yaspin(text='Building workspace image ')
     def _build_workspace_sysroot_image(self, *, context, workspace_image_tag):
         print('Fetching sysroot base image {}'.format(context.args.sysroot_base_image))
         self._docker_client.images.pull(context.args.sysroot_base_image)
@@ -178,7 +180,6 @@ class CCSetupSysrootVerb(VerbExtensionPoint):
             'ROS_DISTRO': context.args.distro,
             'TARGET_TRIPLE': self._platform_info['target_triple']
         }
-        print('Building workspace image {} (this might take some time...)'.format(workspace_image_tag))
         # FIXME: this gives no output until the whole image is built, at least implement some spinner
         try:
             _workspace_image, _ws_image_build_logs = self._docker_client.images.build(
@@ -218,24 +219,25 @@ class CCSetupSysrootVerb(VerbExtensionPoint):
         return target_sysroot_path
 
     def _export_workspace_sysroot_image(self, *, context, workspace_image_tag, target_sysroot_path):
-        print('Exporting sysroot to path [{}]'.format(target_sysroot_path))
-        shutil.rmtree(str(target_sysroot_path), ignore_errors=True)
-        tmp_sysroot_dir = tempfile.mkdtemp(suffix='-cc_build')
-        sysroot_tarball_path = Path(tmp_sysroot_dir) / 'sysroot.tar'
-        print('Exporting filesystem of image {} into tarball {}'.format(workspace_image_tag, sysroot_tarball_path))
-        try:
-            sysroot_container = self._docker_client.containers.run(image=workspace_image_tag, detach=True)
-            with open(str(sysroot_tarball_path), 'wb') as out_f:
-                out_f.writelines(sysroot_container.export())
-            sysroot_container.stop()
-            with tarfile.open(str(sysroot_tarball_path)) as sysroot_tar:
-                relevant_dirs = ['lib', 'usr', 'etc', 'opt', 'root_path']
-                relevant_members = ( m for m in sysroot_tar.getmembers()
-                    if re.match('^({}).*'.format('|'.join(relevant_dirs)), m.name) is not None )
-                sysroot_tar.extractall(str(target_sysroot_path), members=relevant_members)
-        finally:
-            shutil.rmtree(tmp_sysroot_dir, ignore_errors=True)
-        print('Success exporting sysroot to path [{}]'.format(target_sysroot_path))
+        with yaspin(text='Exporting sysroot to path [{}] '.format(target_sysroot_path)) as _sp:
+            shutil.rmtree(str(target_sysroot_path), ignore_errors=True)
+            tmp_sysroot_dir = tempfile.mkdtemp(suffix='-cc_build')
+            sysroot_tarball_path = Path(tmp_sysroot_dir) / 'sysroot.tar'
+            print('Exporting filesystem of image {} into tarball {}'.format(workspace_image_tag, sysroot_tarball_path))
+            try:
+                sysroot_container = self._docker_client.containers.run(image=workspace_image_tag, detach=True)
+                with open(str(sysroot_tarball_path), 'wb') as out_f:
+                    out_f.writelines(sysroot_container.export())
+                sysroot_container.stop()
+                with tarfile.open(str(sysroot_tarball_path)) as sysroot_tar:
+                    relevant_dirs = ['lib', 'usr', 'etc', 'opt', 'root_path']
+                    relevant_members = ( m for m in sysroot_tar.getmembers()
+                        if re.match('^({}).*'.format('|'.join(relevant_dirs)), m.name) is not None )
+                    sysroot_tar.extractall(str(target_sysroot_path), members=relevant_members)
+            finally:
+                shutil.rmtree(tmp_sysroot_dir, ignore_errors=True)
+            print('Success exporting sysroot to path [{}]'.format(target_sysroot_path))
+
 
     def _setup_argument_defaults(self, *, args):
         """
