@@ -274,15 +274,21 @@ export CC_ROOT={cc_root}
 
     _cc_build_system_setup_script_template = '''
 
-sudo rm -f /lib/{target_triple}
+BACKUP_SUFFIX="$(date +%s).bak"
+
+function backup_dir {{
+    TRG_DIR="${{1}}"
+    echo "Backing up ${{TRG_DIR}} to ${{TRG_DIR}}${{BACKUP_SUFFIX}}"
+    sudo mv ${{TRG_DIR}} ${{TRG_DIR}}${{BACKUP_SUFFIX}}
+}}
+
+backup_dir "/lib/{target_triple}"
 sudo ln -s {cc_root}/sysroot/lib/{target_triple} /lib/{target_triple}
-sudo rm -f /usr/lib/{target_triple}
+backup_dir "/usr/lib/{target_triple}"
 sudo ln -s {cc_root}/sysroot/usr/lib/{target_triple} /usr/lib/{target_triple}
 
 CROSS_COMPILER_LIB=/usr/{target_triple}/lib
-CROSS_COMPILER_LIB_BAK=${{CROSS_COMPILER_LIB}}_$(date +%s).bak
-echo "Backing up ${{CROSS_COMPILER_LIB}} to ${{CROSS_COMPILER_LIB_BAK}}"
-sudo mv ${{CROSS_COMPILER_LIB}} ${{CROSS_COMPILER_LIB_BAK}}
+backup_dir "${{CROSS_COMPILER_LIB}}"
 sudo ln -s {cc_root}/sysroot/lib/{target_triple} ${{CROSS_COMPILER_LIB}}
 
 '''
